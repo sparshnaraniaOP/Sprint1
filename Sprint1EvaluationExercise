@@ -1,0 +1,151 @@
+///1   
+CREATE STORAGE INTEGRATION group2sprint1
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = 'S3'
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::120942566269:role/group2sprint1role'
+  STORAGE_ALLOWED_LOCATIONS = ('s3://group2sprint1/group2sprint1heart/')
+   COMMENT = 'This is for the sprint completion'
+     
+desc integration group2sprint1;
+--arn:aws:iam::344203460594:user/o4q20000-s
+--PP45666_SFCRole=14_yxsIy7VqifN6QO6sa/Yzj5QWEKM=
+
+
+
+///2
+create or replace table diseases
+(
+HEARTDISEASE varchar(50),
+BMI float,
+SMOKING varchar(50),
+ALCOHOLDRINKING varchar(50),
+STROKE varchar(50),
+PHYSICALHEALTH float,
+MENTALHEALTH float,
+DIFFWALKING varchar(50),
+SEX varchar(50),
+AGECATEGORY varchar(50),
+RACE varchar(50),
+DIABETIC varchar(50),
+PHYSICALACTIVITY varchar(50),
+GENHEALTH varchar(50),
+SLEEPTIME int,
+ASTHMA varchar(50),
+KIDNEYDISEASE varchar(50),
+SKINCANCER varchar(50)
+);
+
+
+
+///3
+create schema file_formats;
+CREATE OR REPLACE file format file_formats.csv_fileformat
+    type = csv
+    field_delimiter = ','
+    skip_header = 1
+    null_if = ('NULL','null')
+    empty_field_as_null = TRUE;
+    
+create schema PRACTISE.stages;
+    
+CREATE OR REPLACE stage PRACTISE.stages.csv_folder
+    URL = 's3://group2sprint1/group2sprint1heart/'
+    STORAGE_INTEGRATION = group2sprint1
+    FILE_FORMAT = PRACTISE.file_formats.csv_fileformat    
+    
+CREATE OR REPLACE SCHEMA PRACTISE.pipes
+    
+///4
+CREATE OR REPLACE pipe PRACTISE.pipes.diseases_pipe
+auto_ingest = TRUE
+AS
+COPY INTO "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+FROM '@"PRACTISE"."STAGES"."CSV_FOLDER"'
+FILE_FORMAT = '"PRACTISE"."FILE_FORMATS"."CSV_FILEFORMAT"'
+ON_ERROR = 'Continue';
+
+
+
+select COUNT(* )from "PRACTISE"."PUBLIC"."HEART_2020_CLEANED";
+
+
+
+select * from "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+limit 100;
+
+
+
+show pipes;
+
+
+
+show stages;
+
+
+
+
+
+--ALL QUERUES
+
+
+
+--Query 1
+create or replace view gender_with_most_heart_attacks
+as select SEX,count(*) as temp_count from "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+WHERE HEARTDISEASE = TRUE or diabetic= 'yes'
+group by sex
+order by temp_count desc;
+
+
+
+select sex,temp_count from gender_with_most_heart_attacks
+limit 1;
+
+
+
+--Query 2
+select ROUND(AVG(CAST(SUBSTR(AGECATEGORY ,1,2) AS INT ))) AS AVERAGE_AGE
+FROM "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+WHERE HEARTDISEASE = 'YES';
+
+
+
+---Query 3----
+select distinct PhysicalHealth,MentalHealth,Stroke from "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+where stroke = 'Yes' ;
+
+
+
+----Query 4------
+select distinct GenHealth,Round(avg(BMI),2) as AVG_BMI from "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+group by GENHEALTH;
+
+
+
+---Query 5
+select ROUND(AVG(CAST(SUBSTR(AGECATEGORY,1,2) AS INT))) AS AVERAGE_AGE
+FROM "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+WHERE DIFFWALKING = 'YES';
+
+
+
+---Query 6
+SELECT COUNT(*) COMBINATION,BMI,SMOKING,ALCOHOLDRINKING,STROKE,DIABETIC,KIDNEYDISEASE,SKINCANCER
+FROM "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+WHERE HEARTDISEASE = 'YES'
+GROUP BY BMI,SMOKING,ALCOHOLDRINKING,STROKE,DIABETIC,KIDNEYDISEASE,SKINCANCER;
+
+
+
+-----Query 7-----
+select SKINCANCER, round(AVG(BMI),2) from "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+where skincancer = 'yes'
+group by SKINCANCER;
+
+
+
+--Query 8
+select round((count(*)/(select count(*) from "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"))*100,2) as percentage
+from "PRACTISE"."PUBLIC"."HEART_2020_CLEANED"
+where heartdisease='Yes' and stroke='TRUE' and skincancer='TRUE';
